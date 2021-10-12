@@ -21,6 +21,7 @@ public:
     int GetX();
     int GetY();
     int GetChannel();
+    void Resize(double resize_factor);
     void Histogram(int label);
     void Normalize();
     // void Quantitize(int label);

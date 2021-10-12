@@ -33,6 +33,16 @@ int SaliencyGC::GetChannel()
     return Channel;
 }
 
+void SaliencyGC::Resize(double resize_factor)
+{
+    X = X * resize_factor;
+    Y = Y * resize_factor;
+    for (int i = 0; i < Channel; i++)
+    {
+        cv::resize(imgRaw[i], imgRaw[i], cv::Size(X,Y));
+    }
+}
+
 void SaliencyGC::Normalize()
 {
     for (int i = 0; i < Channel; i++)

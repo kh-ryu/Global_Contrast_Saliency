@@ -42,6 +42,8 @@ int main(void)
     // std::cout << img.GetY() << std::endl;
     // std::cout << img.GetChannel() << std::endl;
     
+    img.Resize(0.5); // Consider Original Size (960*1280)
+
     img.Normalize();
 
     img.Histogram(num_bins);
