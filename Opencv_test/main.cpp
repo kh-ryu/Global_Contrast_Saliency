@@ -1,5 +1,5 @@
 #include <iostream>
-#include "saliencyGC.h"
+#include "SaliencyGC.h"
 #include "opencv2/opencv.hpp"
 #include <ctime>
 
