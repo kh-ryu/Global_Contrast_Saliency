@@ -31,10 +31,10 @@ public:
 
 int main(void)
 {
-    const int num_bins = 4;
+    const int num_bins = 8;
     const int band = 5;
 
-    const char* path = "000/IMG_0095_*.tif";
+    const char* path = "Opencv_test/000/IMG_0123_*.tif";
     std::vector<cv::String> filenames;
     cv::glob(path, filenames, false);
     cv::Mat img_per_band[band];
@@ -204,6 +204,8 @@ void SaliencyGC::Salshow()
     cv::imshow("Saliency", imgSal);
     cv::waitKey(0);
     cv::destroyWindow("Saliency");
+
+    cv::imwrite("0123 histogram saliency.png",imgSal);
 }
 
 /*
