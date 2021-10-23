@@ -34,7 +34,7 @@ int main(void)
     const int num_bins = 8;
     const int band = 5;
 
-    const char* path = "Opencv_test/000/IMG_0123_*.tif";
+    const char* path = "Opencv_test/000/IMG_0000_*.tif";
     std::vector<cv::String> filenames;
     cv::glob(path, filenames, false);
     cv::Mat img_per_band[band];
@@ -63,11 +63,15 @@ int main(void)
     cv::Mat img_merge;
     cv::merge(img_per_band, band, img_merge);
     SaliencyGC img(img_merge);
-    // Check image size
-    // std::cout << img.GetX() << std::endl;
-    // std::cout << img.GetY() << std::endl;
-    // std::cout << img.GetChannel() << std::endl;
-    
+ 
+    // Check merged image
+    cv::Mat added = 0.2*img_per_band[0] + 0.2*img_per_band[1] + 0.2*img_per_band[2] + 0.2*img_per_band[3] + 0.2*img_per_band[4];
+    cv::namedWindow("Merged", CV_WINDOW_AUTOSIZE);
+    cv::imshow("Merged", added);
+    cv::waitKey(0);
+    cv::destroyWindow("Merged");
+    cv::imwrite("added image.png",added);
+
     img.Resize(0.5); // Consider Original Size (960*1280)
 
     img.Normalize();
@@ -128,16 +132,6 @@ void SaliencyGC::Normalize()
     {
         cv::normalize(imgRaw[i], imgNorm[i], 255, 0, 32);
     }
-
-    //Initialize check well normalized
-    /*
-    double minVal;
-    double maxVal;
-
-    minMaxLoc(imgNorm[0], &minVal, &maxVal, 0, 0);
-
-    std::cout << minVal << maxVal << std::endl;
-    */
 }
 
 void SaliencyGC::Histogram(int label)
@@ -151,15 +145,6 @@ void SaliencyGC::Histogram(int label)
     cv::calcHist(&imgRaw[2], 1, Ch, cv::Mat(), histo[2], 1, &histSize, &channel_ranges);
     cv::calcHist(&imgRaw[3], 1, Ch, cv::Mat(), histo[3], 1, &histSize, &channel_ranges);
     cv::calcHist(&imgRaw[4], 1, Ch, cv::Mat(), histo[4], 1, &histSize, &channel_ranges);
-
-    //return the histogram info
-    /*
-    std::cout << histo[0].rows << std::endl;
-    std::cout << histo[0].cols << std::endl;
-    std::cout << histo[0].channels() << std::endl;
-    std::cout << histo[0].type() << std::endl;
-    std::cout << typeid(histo[0].at<uchar>(0,0)).name() << std::endl;
-    */
 }
 
 void SaliencyGC::GetSal(int label)
@@ -196,6 +181,8 @@ void SaliencyGC::GetSal(int label)
     // Normalize value for grayscale image
     cv::normalize(imgSal_temp, imgSal_temp, 255, 0, 32);
     imgSal_temp.convertTo(imgSal, CV_8U);
+
+    cv::threshold(imgSal,imgSal,200,255,0);
 }
 
 void SaliencyGC::Salshow()
@@ -205,25 +192,7 @@ void SaliencyGC::Salshow()
     cv::waitKey(0);
     cv::destroyWindow("Saliency");
 
-    cv::imwrite("0123 histogram saliency.png",imgSal);
+    cv::imwrite("0000 histogram saliency.png",imgSal);
 }
 
-/*
-void SaliencyGC::Quantitize(int label)
-{
-    uchar labels = (uchar)label;
-    double length = 255 / labels;
-    std::cout << length << std::endl;
 
-    for (int i = 0; i < Channel; i++) {
-        imgNorm[i].copyTo(imgQuant[i]);
-        for (int y = 0; y < Y; y++) {
-            for (int x = 0; x < X; x++) {
-                uchar data = imgNorm[i].at<uchar>(y,x);
-                uchar quant = (uchar) data / length;
-                imgQuant[i].at<uchar>(y, x) = quant;
-            }
-        }
-    }
-}
-*/

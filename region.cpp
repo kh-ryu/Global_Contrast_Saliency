@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <typeinfo>
 
-#define k_means 6
+#define k_means 4
 
 class SaliencyGC
 {
@@ -17,7 +17,7 @@ private:
     int X;
     int Y;
     int Channel;
-    cv::Mat histo[5][k_means];
+    cv::Mat histo[k_means][5];
     cv::Mat segment_labels;
 public:
     SaliencyGC(cv::Mat& img);
@@ -25,19 +25,19 @@ public:
     int GetY();
     int GetChannel();
     void Resize(double resize_factor);
-    void Histogram(int label, int k);
+    void Histogram(int label);
     void Normalize();
-    void Segment(int k);
+    void Segment();
     void GetSal(int label);
     void Salshow();
 };
 
 int main(void)
 {
-    const int num_bins = 4;
+    const int num_bins = 8;
     const int band = 5;
 
-    const char* path = "Opencv_test/000/IMG_0123_*.tif";
+    const char* path = "Opencv_test/000/IMG_0000_*.tif";
     std::vector<cv::String> filenames;
     cv::glob(path, filenames, false);
     cv::Mat img_per_band[band];
@@ -72,9 +72,9 @@ int main(void)
 
     img.Normalize();
 
-    img.Segment(k_means);
+    img.Segment();
 
-    img.Histogram(num_bins, k_means);
+    img.Histogram(num_bins);
 
     img.GetSal(num_bins);
 
@@ -95,7 +95,7 @@ SaliencyGC::SaliencyGC(cv::Mat& img)
     cv::Mat imgNorm[5] = { cv::Mat(X, Y, CV_8U) };
     cv::Mat imgQuant[5] = { cv::Mat(X, Y, CV_8U) };
     imgSal = cv::Mat(X, Y, CV_8U);
-    cv::Mat histo[5];
+    cv::Mat histo[k_means][5];
     cv::Mat segment_labels;
 }
 
@@ -131,25 +131,15 @@ void SaliencyGC::Normalize()
     {
         cv::normalize(imgRaw[i], imgNorm[i], 255, 0, 32);
     }
-
-    //Initialize check well normalized
-    /*
-    double minVal;
-    double maxVal;
-
-    minMaxLoc(imgNorm[0], &minVal, &maxVal, 0, 0);
-
-    std::cout << minVal << maxVal << std::endl;
-    */
 }
 
-void SaliencyGC::Histogram(int label, int k)
+void SaliencyGC::Histogram(int label)
 {
     const int Ch[] = { 0 };
     int histSize = label;
     float channel_range[] = { 0.0, 255.0 };
     const float* channel_ranges = { channel_range };
-    for(int i=0;i<k;i++)
+    for(int i=0;i<k_means;i++)
     {
         cv::Mat mask = cv::Mat::zeros(Y,X,CV_8U);
         for (int y = 0; y < Y; y++) {
@@ -161,9 +151,9 @@ void SaliencyGC::Histogram(int label, int k)
         }
         
         for(int j=0;j<Channel;j++){
-            cv::Mat masked_img = cv::Mat::zeros(Y,X,CV_32F);
-            imgRaw[j].copyTo(masked_img,mask);
-            cv::calcHist(&masked_img, 1, Ch, cv::Mat(), histo[j][i], 1, &histSize, &channel_ranges);
+            // cv::Mat masked_img = cv::Mat::zeros(Y,X,CV_32F);
+            // imgRaw[j].copyTo(masked_img,mask);
+            cv::calcHist(&imgRaw[j], 1, Ch, mask, histo[i][j], 1, &histSize, &channel_ranges);
         }
         
     }
@@ -174,15 +164,24 @@ void SaliencyGC::GetSal(int num_bins)
 {
     
     float sal[k_means] = {0.0};
+    int total_pixel[k_means][Channel] = {0};
 
+    for (int i=0; i<k_means; i++){
+        for (int c=0; c<Channel; c++){
+            for (int m=0 ;m<num_bins; m++){
+                total_pixel[i][c] += (int) histo[i][c].at<float>(m,0);
+            }
+            
+        }
+    }
     for (int i=0;i<k_means;i++){
         for (int c=0;c<Channel;c++){
             for (int j=0;j<k_means;j++){
                 if (i != j){
                     for (int m = 0; m<num_bins; m++){
                         for (int n = 0; n<num_bins; n++){
-                            float freq1 = histo[c][i].at<float>(m,0)/(X*Y);
-                            float freq2 = histo[c][j].at<float>(n,0)/(X*Y);
+                            float freq1 = histo[i][c].at<float>(m,0)/total_pixel[i][c];
+                            float freq2 = histo[j][c].at<float>(n,0)/total_pixel[j][c];
                             sal[i] += freq1*freq2*abs(m-n);
                         }
                     }
@@ -202,6 +201,9 @@ void SaliencyGC::GetSal(int num_bins)
     cv::normalize(imgSal_temp, imgSal_temp, 255, 0, 32);
     imgSal_temp.convertTo(imgSal, CV_8U);
     imgSal = 255-imgSal;
+
+    // cv::threshold(imgSal, imgSal, 250, 255, 0);
+
 }
 
 void SaliencyGC::Salshow()
@@ -211,10 +213,10 @@ void SaliencyGC::Salshow()
     cv::waitKey(0);
     cv::destroyWindow("Saliency");
 
-    cv::imwrite("0123 Saleincy.png",imgSal);
+    cv::imwrite("0000 Saleincy cut.png",imgSal);
 }
 
-void SaliencyGC::Segment(int k)
+void SaliencyGC::Segment()
 {
     cv::Mat flatten = cv::Mat::zeros(X * Y, Channel, CV_32F);
     
@@ -236,10 +238,11 @@ void SaliencyGC::Segment(int k)
 
     cv::Mat centeres, New_image;
     int attempts = 10;
-    cv::kmeans(flatten, k, segment_labels, cv::TermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 10, 1.0), attempts, cv::KMEANS_PP_CENTERS, centeres);
+    cv::kmeans(flatten, k_means, segment_labels, cv::TermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 10, 1.0), attempts, cv::KMEANS_PP_CENTERS, centeres);
 
-    int colors[k];
-    for (int i=0;i<k;i++)
+    
+    int colors[k_means];
+    for (int i=0;i<k_means;i++)
     {
         colors[i] = 255/(i+1);
     }
@@ -257,4 +260,5 @@ void SaliencyGC::Segment(int k)
     cv::imshow("K-means", New_image);
     cv::waitKey(0);
     cv::destroyWindow("K-means");
+    
 }
