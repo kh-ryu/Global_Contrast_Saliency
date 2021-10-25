@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <typeinfo>
 
-#define k_means 4
+#define k_means 8
 
 class SaliencyGC
 {
@@ -19,6 +19,7 @@ private:
     int Channel;
     cv::Mat histo[k_means][5];
     cv::Mat segment_labels;
+    cv::Mat Salcut;
 public:
     SaliencyGC(cv::Mat& img);
     int GetX();
@@ -200,9 +201,9 @@ void SaliencyGC::GetSal(int num_bins)
     // Normalize value for grayscale image
     cv::normalize(imgSal_temp, imgSal_temp, 255, 0, 32);
     imgSal_temp.convertTo(imgSal, CV_8U);
-    imgSal = 255-imgSal;
+    // imgSal = 255-imgSal;
 
-    // cv::threshold(imgSal, imgSal, 250, 255, 0);
+    cv::threshold(imgSal, Salcut, 250, 255, 0);
 
 }
 
@@ -213,12 +214,13 @@ void SaliencyGC::Salshow()
     cv::waitKey(0);
     cv::destroyWindow("Saliency");
 
-    cv::imwrite("0000 Saleincy cut.png",imgSal);
+    cv::imwrite("Saliency map.png",imgSal);
+    cv::imwrite("Saleincy cut.png", Salcut);
 }
 
 void SaliencyGC::Segment()
 {
-    cv::Mat flatten = cv::Mat::zeros(X * Y, Channel, CV_32F);
+    cv::Mat flatten = cv::Mat::zeros(X * Y, Channel+2, CV_32F);
     
     cv::blur(imgNorm[0],imgNorm[0],cv::Size(10,10));
     cv::blur(imgNorm[1],imgNorm[1],cv::Size(10,10));
@@ -233,11 +235,13 @@ void SaliencyGC::Segment()
             flatten.at<float>(x + y * X, 2) = imgNorm[2].at<uchar>(y, x) / 255.0;
             flatten.at<float>(x + y * X, 3) = imgNorm[3].at<uchar>(y, x) / 255.0;
             flatten.at<float>(x + y * X, 4) = imgNorm[4].at<uchar>(y, x) / 255.0;
+            flatten.at<float>(x + y * X, 5) = x / X;
+            flatten.at<float>(x + y * X, 6) = y / Y;
         }
     }
 
     cv::Mat centeres, New_image;
-    int attempts = 10;
+    int attempts = 5;
     cv::kmeans(flatten, k_means, segment_labels, cv::TermCriteria(CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 10, 1.0), attempts, cv::KMEANS_PP_CENTERS, centeres);
 
     
@@ -260,5 +264,7 @@ void SaliencyGC::Segment()
     cv::imshow("K-means", New_image);
     cv::waitKey(0);
     cv::destroyWindow("K-means");
+
+    cv::imwrite("K-means clustering.png", New_image);
     
 }
