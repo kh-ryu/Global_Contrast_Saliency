@@ -18,21 +18,22 @@ private:
     cv::Mat histo[5];
     cv::Mat Salcut;
 public:
-    SaliencyGC(cv::Mat &img);
+    SaliencyGC(cv::Mat img[5]);
     int GetX();
     int GetY();
     int GetChannel();
     void Resize(double resize_factor);
     void Histogram(int label);
     void Normalize();
-    // void Quantitize(int label);
     void GetSal(int label);
     void Salshow();
 };
 
 int main(void)
 {
+    // number of bins for color histogram
     const int num_bins = 8;
+    // number of bands in Micasense image
     const int band = 5;
 
     const char* path = "Opencv_test/000/IMG_0075_*.tif";
@@ -51,30 +52,14 @@ int main(void)
         std::cout << "No image" << std::endl;
         return -1;
     }
-    // Check loaded image
-    /*
-    cv::namedWindow("Blue", CV_WINDOW_AUTOSIZE);
-    cv::imshow("Blue", img_per_band[0]);
-    cv::waitKey(0);
-    cv::destroyWindow("example");
-    */
+    
     // Start time calculation
     const clock_t begin_time = clock();
 
     // merge images to one data
-    cv::Mat img_merge;
-    cv::merge(img_per_band, band, img_merge);
-    SaliencyGC img(img_merge);
- 
-    // Check merged image
-    /*
-    cv::Mat added = img_per_band[0] + img_per_band[1] + img_per_band[2] + img_per_band[3] + img_per_band[4];
-    cv::namedWindow("Merged", CV_WINDOW_AUTOSIZE);
-    cv::imshow("Merged", added);
-    cv::waitKey(0);
-    cv::destroyWindow("Merged");
-    cv::imwrite("added image.png",added);
-    */
+    // cv::Mat img_merge;
+    // cv::merge(img_per_band, band, img_merge);
+    SaliencyGC img(img_per_band);
 
     img.Resize(0.5); // Consider Original Size (960*1280)
 
@@ -92,33 +77,41 @@ int main(void)
     return 0;
 }
 
-SaliencyGC::SaliencyGC(cv::Mat &img)
+// initialize
+SaliencyGC::SaliencyGC(cv::Mat img[5])
 {
-    cv::split(img, imgRaw);
-    X = img.cols;
-    Y = img.rows;
-    Channel = img.channels();
+    for (int i=0; i<5; i++)
+    {
+        imgRaw[i] = img[i];
+    }
+    X = imgRaw[0].cols;
+    Y = imgRaw[0].rows;
+    Channel = imgRaw[0].channels();
     cv::Mat imgNorm[5] = { cv::Mat(X, Y, CV_8U) };
     cv::Mat imgQuant[5] = { cv::Mat(X, Y, CV_8U) };
     imgSal = cv::Mat(X, Y, CV_8U);
     cv::Mat histo[5];
 }
 
+// return X of image size (column)
 int SaliencyGC::GetX()
 {
     return X;
 }
 
+// return Y of image size (rows)
 int SaliencyGC::GetY()
 {
     return Y;
 }
 
+// return the number of channels
 int SaliencyGC::GetChannel()
 {
     return Channel;
 }
 
+// resize image size
 void SaliencyGC::Resize(double resize_factor)
 {
     X = X * resize_factor;
@@ -129,7 +122,7 @@ void SaliencyGC::Resize(double resize_factor)
     }
 }
 
-
+// normalize image to 8 bit gray scale
 void SaliencyGC::Normalize()
 {
     for (int i = 0; i < Channel; i++)
@@ -138,6 +131,7 @@ void SaliencyGC::Normalize()
     }
 }
 
+// calculate color histogram of each band
 void SaliencyGC::Histogram(int label)
 {
     const int Ch[] = { 0 };
@@ -151,6 +145,7 @@ void SaliencyGC::Histogram(int label)
     cv::calcHist(&imgRaw[4], 1, Ch, cv::Mat(), histo[4], 1, &histSize, &channel_ranges);
 }
 
+// calculate saliency value of each pixel
 void SaliencyGC::GetSal(int label)
 {
     // histogram labels and length
@@ -185,20 +180,17 @@ void SaliencyGC::GetSal(int label)
     // Normalize value for grayscale image
     cv::normalize(imgSal_temp, imgSal_temp, 0, 255, 32);
     imgSal_temp.convertTo(imgSal, CV_8U);
-
-    cv::threshold(imgSal,Salcut,170,255,0);
+    // if saliency value is above 170, it is saliency object
+    cv::threshold(imgSal,Salcut,200,255,0);
 }
 
+// show saliency map
 void SaliencyGC::Salshow()
 {
-    /*
     cv::namedWindow("Saliency", CV_WINDOW_AUTOSIZE);
-    cv::imshow("Saliency", imgSal);
+    cv::imshow("Saliency", Salcut);
     cv::waitKey(0);
     cv::destroyWindow("Saliency");
-    */
-    // cv::imwrite("0075 histogram saliency.png",imgSal);
-    cv::imwrite("Histogram Saliency Cut.png",Salcut);
 }
 
 

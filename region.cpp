@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include <typeinfo>
 
-#define k_means 8
+#define k_means 4
 
 class SaliencyGC
 {
@@ -21,7 +21,7 @@ private:
     cv::Mat segment_labels;
     cv::Mat Salcut;
 public:
-    SaliencyGC(cv::Mat& img);
+    SaliencyGC(cv::Mat img[5]);
     int GetX();
     int GetY();
     int GetChannel();
@@ -35,10 +35,10 @@ public:
 
 int main(void)
 {
-    const int num_bins = 8;
+    const int num_bins = 6;
     const int band = 5;
 
-    const char* path = "Opencv_test/000/IMG_0000_*.tif";
+    const char* path = "Opencv_test/000/IMG_0075_*.tif";
     std::vector<cv::String> filenames;
     cv::glob(path, filenames, false);
     cv::Mat img_per_band[band];
@@ -63,11 +63,7 @@ int main(void)
     // Start time calculation
     const clock_t begin_time = clock();
 
-    // merge images to one data
-    cv::Mat img_merge;
-    cv::merge(img_per_band, band, img_merge);
-    SaliencyGC img(img_merge);
-    
+    SaliencyGC img(img_per_band);    
 
     img.Resize(0.5); // Consider Original Size (960*1280)
 
@@ -87,12 +83,15 @@ int main(void)
 }
 
 
-SaliencyGC::SaliencyGC(cv::Mat& img)
+SaliencyGC::SaliencyGC(cv::Mat img[5])
 {
-    cv::split(img, imgRaw);
-    X = img.cols;
-    Y = img.rows;
-    Channel = img.channels();
+    for (int i=0; i<5; i++)
+    {
+        imgRaw[i] = img[i];
+    }
+    X = imgRaw[0].cols;
+    Y = imgRaw[0].rows;
+    Channel = 5;
     cv::Mat imgNorm[5] = { cv::Mat(X, Y, CV_8U) };
     cv::Mat imgQuant[5] = { cv::Mat(X, Y, CV_8U) };
     imgSal = cv::Mat(X, Y, CV_8U);
@@ -209,13 +208,14 @@ void SaliencyGC::GetSal(int num_bins)
 
 void SaliencyGC::Salshow()
 {
+
     cv::namedWindow("Saliency", CV_WINDOW_AUTOSIZE);
     cv::imshow("Saliency", imgSal);
     cv::waitKey(0);
     cv::destroyWindow("Saliency");
 
-    cv::imwrite("Saliency map.png",imgSal);
-    cv::imwrite("Saleincy cut.png", Salcut);
+    // cv::imwrite("Saliency map.png",imgSal);
+    // cv::imwrite("Saleincy cut.png", Salcut);
 }
 
 void SaliencyGC::Segment()
@@ -260,11 +260,12 @@ void SaliencyGC::Segment()
 
     New_image.convertTo(New_image, CV_8U);
 
+    /*
     cv::namedWindow("K-means", CV_WINDOW_AUTOSIZE);
     cv::imshow("K-means", New_image);
     cv::waitKey(0);
     cv::destroyWindow("K-means");
 
     cv::imwrite("K-means clustering.png", New_image);
-    
+    */
 }
