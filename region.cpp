@@ -38,7 +38,7 @@ int main(void)
     const int num_bins = 6;
     const int band = 5;
 
-    const char* path = "Opencv_test/000/IMG_0075_*.tif";
+    const char* path = "data/000/IMG_0075_*.tif";
     std::vector<cv::String> filenames;
     cv::glob(path, filenames, false);
     cv::Mat img_per_band[band];
